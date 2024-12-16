@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alarm Clock</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: url('background.jpg') no-repeat center center/cover;
+        }
+
+        .container {
+            text-align: center;
+            background: pink;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(175, 58, 58, 0.897);
+        }
+
+        .container.alarm-container {
+            background: rgba(253, 253, 253, 0.8);
+            /* Light translucent background */
+            color: #333;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .stopwatch-display {
+            font-size: 2em;
+            margin: 10px 0;
+        }
+
+        .themes {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container alarm-container">
+        <h1> Alarm Clock</h1>
+
+        <!-- Current Time and Date -->
+        <div id="current-time">00:00:00</div>
+        <div id="current-date">YYYY-MM-DD</div>
+
+        <!-- Alarm Section -->
+        <div class="section">
+            <h3>Set Alarm</h3>
+            <label for="alarm-date">Date:</label>
+            <input type="date" id="alarm-date">
+            <label for="alarm-time">Time:</label>
+            <input type="time" id="alarm-time">
+            <button onclick="setAlarm()">Set Alarm</button>
+            <div id="alarm-message"></div>
+            <ul id="alarms"></ul>
+        </div>
+
+        <!-- Stopwatch Section -->
+        <div class="section">
+            <h3>Stopwatch</h3>
+            <div class="stopwatch-display" id="stopwatch-display">00:00:00</div>
+            <button onclick="startStopwatch()">Start</button>
+            <button onclick="pauseStopwatch()">Pause</button>
+            <button onclick="resetStopwatch()">Reset</button>
+            <button onclick="recordLap()">Lap</button>
+            <ul id="laps"></ul>
+        </div>
+
+        <!-- Theme Section -->
+        <div class="themes">
+            <h3>Select Theme</h3>
+            <button onclick="setTheme('default')">Default</button>
+            <button onclick="setTheme('dark')">Dark</button>
+            <button onclick="setTheme('light')">Light</button>
+        </div>
+    </div>
+
+    <audio id="alarm-sound" src="alarm.mp3" preload="auto"></audio>
+
+    <script>
+        // Current Time and Date
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('current-date').textContent = now.toISOString().split('T')[0];
+        }
+
+        setInterval(updateTime, 1000);
+
+        // Alarm Clock
+        let alarms = [];
+
+        function setAlarm() {
+            const alarmDate = document.getElementById('alarm-date').value;
+            const alarmTime = document.getElementById('alarm-time').value;
+            const alarmDateTime = new Date(`${alarmDate}T${alarmTime}`);
+
+            if (alarmDateTime > new Date()) {
+                if (!alarms.some(alarm => alarm.getTime() === alarmDateTime.getTime())) {
+                    alarms.push(alarmDateTime);
+                    displayAlarms();
+                    alert(`Alarm set for ${alarmDateTime}`);
+                } else {
+                    alert('Duplicate alarm not allowed.');
+                }
+            } else {
+                alert('Please set a future alarm.');
+            }
+        }
+
+        function displayAlarms() {
+            const alarmsList = document.getElementById('alarms');
+            alarmsList.innerHTML = '';
+            alarms.forEach((alarm, index) => {
+                const li = document.createElement('li');
+                li.textContent = `Alarm at ${alarm.toLocaleString()}`;
+                alarmsList.appendChild(li);
+            });
+        }
+
+        setInterval(() => {
+            alarms.forEach((alarm, index) => {
+                if (new Date() >= alarm) {
+                    triggerAlarm();
+                    alarms.splice(index, 1);
+                    displayAlarms();
+                }
+            });
+        }, 1000);
+
+        function triggerAlarm() {
+            const audio = document.getElementById('alarm-sound');
+            audio.play();
+            alert('Alarm ringing!');
+        }
+
+        // Stopwatch
+        let stopwatchInterval;
+        let stopwatchTime = 0;
+        let stopwatchRunning = false;
+        let laps = [];
+
+        function updateStopwatchDisplay() {
+            const hours = Math.floor(stopwatchTime / 3600);
+            const minutes = Math.floor((stopwatchTime % 3600) / 60);
+            const seconds = stopwatchTime % 60;
+            document.getElementById('stopwatch-display').textContent =
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startStopwatch() {
+            if (!stopwatchRunning) {
+                stopwatchRunning = true;
+                stopwatchInterval = setInterval(() => {
+                    stopwatchTime++;
+                    updateStopwatchDisplay();
+                }, 1000);
+            }
+        }
+
+        function pauseStopwatch() {
+            if (stopwatchRunning) {
+                stopwatchRunning = false;
+                clearInterval(stopwatchInterval);
+            }
+        }
+
+        function resetStopwatch() {
+            stopwatchTime = 0;
+            laps = [];
+            updateStopwatchDisplay();
+            displayLaps();
+            pauseStopwatch();
+        }
+
+        function recordLap() {
+            laps.push(stopwatchTime);
+            displayLaps();
+        }
+
+        function displayLaps() {
+            const lapsList = document.getElementById('laps');
+            lapsList.innerHTML = '';
+            laps.forEach((lap, index) => {
+                const lapTime = new Date(lap * 1000).toISOString().substr(11, 8);
+                const li = document.createElement('li');
+                li.textContent = `Lap ${index + 1}: ${lapTime}`;
+                lapsList.appendChild(li);
+            });
+        }
+
+        // Themes
+        function setTheme(theme) {
+            switch (theme) {
+                case 'dark':
+                    document.body.style.backgroundColor = '#121212';
+                    document.body.style.color = '#FFFFFF';
+                    break;
+                case 'light':
+                    document.body.style.backgroundColor = '#FFFFFF';
+                    document.body.style.color = '#000000';
+                    break;
+                default:
+                    document.body.style.background = "url('background.jpg') no-repeat center center/cover";
+                    document.body.style.color = '';
+            }
+        }
+    </script>
+</body>
+
+</html>
